@@ -5,31 +5,43 @@
   "scripts": {
     "dev": "bun run css:build && bun --hot src/server.ts",
     "start": "bun run css:build && bun src/server.ts",
+    "build": "bun scripts/build.ts",
     "css:build": "tailwindcss -i ./src/styles.css -o ./src/styles.built.css",
     "css:watch": "tailwindcss -i ./src/styles.css -o ./src/styles.built.css --watch",
-    "seed": "bun src/seed.ts",
-    "run:build": "bun run css:build && bun build src/server.ts"
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "migrate-data": "bun src/migrate-data.ts"
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0",
-    "class-variance-authority": "^0.7.1",
-    "lucide-react": "^0.469.0",
-    "date-fns": "^4.1.0",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-label": "^2.1.1",
-    "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-popover": "^1.1.4",
-    "@radix-ui/react-progress": "^1.1.1"
+    "@radix-ui/react-progress": "^1.1.1",
+    "@radix-ui/react-slot": "^1.1.1",
+    "@vercel/postgres": "^0.10.0",
+    "better-auth": "^1.4.18",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.1",
+    "lucide-react": "^0.469.0",
+    "pg": "^8.18.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.8",
+    "@types/pg": "^8.16.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.7.0",
-    "tailwindcss": "^3.4.0",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49"
-  }
+    "drizzle-kit": "^0.31.8",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vercel": "^50.9.6"
+  },
+  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd"
 }

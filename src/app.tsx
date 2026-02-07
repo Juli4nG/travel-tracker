@@ -1,14 +1,27 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.built.css";
+import { useSession } from "./lib/auth-client";
+import { AuthForm } from "./components/AuthForm";
+import { UserMenu } from "./components/UserMenu";
 import { Dashboard } from "./components/Dashboard";
 import { TripList } from "./components/TripList";
 import { TripForm } from "./components/TripForm";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { Button } from "./components/ui/button";
-import { Plus, Globe, Settings } from "lucide-react";
+import { Plus, Globe, Settings, Loader2 } from "lucide-react";
 
 interface Trip {
+  id: number;
+  destination: string;
+  departureDate: string;
+  returnDate: string;
+  notes: string | null;
+  createdAt: string;
+}
+
+// Map from API format to component format
+interface DisplayTrip {
   id: number;
   destination: string;
   departure_date: string;
@@ -37,34 +50,64 @@ interface Stats {
   projectedWarningLevel: "safe" | "caution" | "danger";
 }
 
+// Transform trip from API format (camelCase) to display format (snake_case)
+function transformTrip(trip: Trip): DisplayTrip {
+  return {
+    id: trip.id,
+    destination: trip.destination,
+    departure_date: trip.departureDate,
+    return_date: trip.returnDate,
+    notes: trip.notes,
+    created_at: trip.createdAt,
+  };
+}
+
 function App() {
-  const [trips, setTrips] = useState<Trip[]>([]);
+  const { data: session, isPending: authLoading } = useSession();
+  const [trips, setTrips] = useState<DisplayTrip[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [editTrip, setEditTrip] = useState<Trip | null>(null);
+  const [editTrip, setEditTrip] = useState<DisplayTrip | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const [tripsRes, statsRes] = await Promise.all([
         fetch("/api/trips"),
         fetch("/api/stats"),
       ]);
-      const tripsData = await tripsRes.json();
+
+      if (!tripsRes.ok || !statsRes.ok) {
+        console.error("Failed to fetch data");
+        return;
+      }
+
+      const tripsData: Trip[] = await tripsRes.json();
       const statsData = await statsRes.json();
-      setTrips(tripsData);
+
+      // Transform trips to display format
+      setTrips(tripsData.map(transformTrip));
       setStats(statsData);
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (session) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
+  }, [session, fetchData]);
 
   const handleAddTrip = async (trip: {
     destination: string;
@@ -138,7 +181,7 @@ function App() {
     await fetchData();
   };
 
-  const openEditForm = (trip: Trip) => {
+  const openEditForm = (trip: DisplayTrip) => {
     setEditTrip(trip);
     setFormOpen(true);
   };
@@ -149,6 +192,33 @@ function App() {
       setEditTrip(null);
     }
   };
+
+  const handleAuthSuccess = () => {
+    // Session will update automatically, triggering a refetch
+    setLoading(true);
+  };
+
+  const handleSignOut = () => {
+    setTrips([]);
+    setStats(null);
+  };
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!session) {
+    return <AuthForm onSuccess={handleAuthSuccess} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -166,13 +236,18 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+            >
               <Settings className="h-4 w-4" />
             </Button>
             <Button onClick={() => setFormOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Trip
             </Button>
+            <UserMenu user={session.user} onSignOut={handleSignOut} />
           </div>
         </div>
       </header>
@@ -184,7 +259,8 @@ function App() {
             <div>
               <h3 className="font-medium text-yellow-800">Setup Required</h3>
               <p className="text-sm text-yellow-700">
-                Set your green card start date to calculate your citizenship eligibility.
+                Set your green card start date to calculate your citizenship
+                eligibility.
               </p>
             </div>
             <Button variant="outline" onClick={() => setSettingsOpen(true)}>
